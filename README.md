@@ -1,7 +1,7 @@
 # HavenHub
 
 ```bash
-# Install (Node.js 24+)
+# Install (Node.js 24.15+ LTS or 26+)
 npm --prefix client install
 npm --prefix server install
 
@@ -29,6 +29,7 @@ npm run dev
 ```bash
 # Checks (from the project root)
 npm --prefix client run lint
+npm --prefix client test
 npm --prefix client run build
 npm --prefix server run check
 npm --prefix server test

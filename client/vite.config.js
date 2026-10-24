@@ -8,4 +8,9 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  test: {
+    environment: 'jsdom',
+    env: { VITE_API_URL: 'http://havenhub.test/api' },
+    restoreMocks: true,
+  },
 });
