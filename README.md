@@ -7,7 +7,9 @@ npm --prefix server install
 
 # Configure local environment files (run once from the project root)
 printf 'VITE_API_URL=http://localhost:5000/api\n' > client/.env
-printf 'PORT=5000\nCLIENT_ORIGIN=http://localhost:5173\n' > server/.env
+# Copy only if server/.env does not already exist
+cp -n server/.env.example server/.env
+# Edit server/.env and set MONGODB_URI before starting the API
 ```
 
 ```bash
