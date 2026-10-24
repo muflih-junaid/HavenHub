@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address'],
       unique: true,
     },
-    // Accept a precomputed password hash; password handling belongs to future auth endpoints.
+    // Auth routes and the local admin script hash passwords before saving.
     passwordHash: {
       type: String,
       required: [true, 'Password hash is required'],

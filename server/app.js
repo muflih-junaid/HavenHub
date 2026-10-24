@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 
@@ -12,6 +13,8 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'HavenHub API is running' });
 });
 
+app.use('/api/auth', authRoutes);
+
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
@@ -20,14 +23,21 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
 
-  const status = err.status >= 400 && err.status < 600 ? err.status : 500;
-  if (status >= 500) console.error(err);
+  let status = err.status >= 400 && err.status < 600 ? err.status : 500;
 
   let message = 'Internal server error';
-  if (status < 500) {
+  if (err.code === 11000) {
+    status = 409;
+    message = 'An account with that email already exists';
+  } else if (err.name === 'ValidationError') {
+    status = 400;
+    // Do not return Mongoose errors: they can include rejected field values.
+    message = 'Invalid user data. Check name, email, phone, role, and location';
+  } else if (status < 500) {
     message = err.type === 'entity.parse.failed' ? 'Invalid JSON request body' : err.message;
   }
 
+  if (status >= 500) console.error('Request failed with an internal server error');
   res.status(status).json({ message });
 });
 

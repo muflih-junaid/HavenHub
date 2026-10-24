@@ -2,6 +2,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './app.js';
 import User from './models/User.js';
+import { getJwtConfig } from './utils/auth.js';
 
 mongoose.connection.on('error', () => {
   // Driver errors can include connection details, so do not log the raw error.
@@ -9,6 +10,7 @@ mongoose.connection.on('error', () => {
 });
 
 async function startServer() {
+  getJwtConfig();
   const port = Number(process.env.PORT || 5000);
   const uri = process.env.MONGODB_URI?.trim();
 
