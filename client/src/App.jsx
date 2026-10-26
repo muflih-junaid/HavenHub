@@ -9,6 +9,9 @@ import Dashboard from './pages/Dashboard.jsx';
 import DisasterForm from './pages/DisasterForm.jsx';
 import DisasterList from './pages/DisasterList.jsx';
 import DisasterDetail from './pages/DisasterDetail.jsx';
+import AssistanceForm from './pages/AssistanceForm.jsx';
+import AssistanceList from './pages/AssistanceList.jsx';
+import AssistanceDetail from './pages/AssistanceDetail.jsx';
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -23,6 +26,14 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
+          <Route element={<ProtectedRoute roles={['citizen']} />}>
+            <Route path="/requests/new" element={<AssistanceForm />} />
+            <Route path="/requests/mine" element={<AssistanceList mine />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={['admin', 'volunteer']} />}>
+            <Route path="/requests" element={<AssistanceList />} />
+          </Route>
+          <Route path="/requests/:id" element={<AssistanceDetail />} />
           <Route path="/disasters" element={<DisasterList />} />
           <Route element={<ProtectedRoute roles={['citizen']} />}>
             <Route path="/disasters/new" element={<DisasterForm />} />

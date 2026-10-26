@@ -7,7 +7,7 @@ export default function Layout() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const page = pathname === '/login' ? 'Sign in' : pathname === '/register' ? 'Create account' : pathname.startsWith('/disasters') ? 'Disaster reports' : pathname.startsWith('/dashboard') ? 'Dashboard' : 'Community resilience';
+    const page = pathname === '/login' ? 'Sign in' : pathname === '/register' ? 'Create account' : pathname.startsWith('/requests') ? 'Assistance requests' : pathname.startsWith('/disasters') ? 'Disaster reports' : pathname.startsWith('/dashboard') ? 'Dashboard' : 'Community resilience';
     document.title = `${page} | HavenHub`;
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -34,6 +34,7 @@ export default function Layout() {
               <>
                 <NavLink to={dashboardPath(user.role)} className={navClass}>Dashboard</NavLink>
                 <NavLink to="/disasters" className={navClass}>Reports</NavLink>
+                <NavLink to={user.role === 'citizen' ? '/requests/mine' : '/requests'} className={navClass}>{user.role === 'citizen' ? 'My requests' : 'Requests'}</NavLink>
                 <button onClick={logout} className="cursor-pointer border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Sign out</button>
               </>
             ) : (

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import app from './app.js';
 import User from './models/User.js';
 import DisasterReport from './models/DisasterReport.js';
+import AssistanceRequest from './models/AssistanceRequest.js';
 import { getJwtConfig } from './utils/auth.js';
 
 mongoose.connection.on('error', () => {
@@ -26,7 +27,7 @@ async function startServer() {
   try {
     await mongoose.connect(uri);
     // Wait for model indexes before accepting requests.
-    await Promise.all([User.init(), DisasterReport.init()]);
+    await Promise.all([User.init(), DisasterReport.init(), AssistanceRequest.init()]);
   } catch {
     throw new Error('MongoDB initialization failed. Check MONGODB_URI, credentials, network access, and model indexes.');
   }

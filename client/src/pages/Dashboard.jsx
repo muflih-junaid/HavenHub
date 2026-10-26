@@ -6,12 +6,12 @@ const dashboards = {
   citizen: {
     title: 'Your community starts here.',
     description: 'Your space to stay connected and find support when it matters.',
-    modules: [['Assistance requests', 'Connect with support for your needs.']],
+    modules: [],
   },
   volunteer: {
     title: 'Ready to make a difference.',
     description: 'Your space to help others and support a coordinated response.',
-    modules: [['Volunteer assignments', 'Find your place in the community response.'], ['Community assistance', 'Help people get the support they need.']],
+    modules: [['Volunteer assignments', 'Find your place in the community response.']],
   },
   admin: {
     title: 'A clearer view of the response.',
@@ -43,7 +43,7 @@ export default function Dashboard() {
         <p className="mt-4 max-w-2xl leading-7 text-slate-600">Welcome, {user.name}. {dashboard.description}</p>
         <div className="mt-8 flex items-start gap-4 border border-slate-200 bg-white p-5">
           <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center bg-emerald-50 font-bold text-emerald-700">✓</span>
-          <div><h2 className="text-sm font-semibold">Your account is ready</h2><p className="mt-1 text-sm leading-6 text-slate-600">Disaster reporting is available. Other response tools remain planned.</p></div>
+          <div><h2 className="text-sm font-semibold">Your account is ready</h2><p className="mt-1 text-sm leading-6 text-slate-600">Disaster reporting and assistance requests are available. Other response tools remain planned.</p></div>
         </div>
         <section className="mt-7 border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-semibold tracking-tight">Disaster reports</h2>
@@ -53,8 +53,16 @@ export default function Dashboard() {
             {user.role === 'citizen' && <Link to="/disasters/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Report a disaster</Link>}
           </div>
         </section>
+        <section className="mt-7 border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-semibold tracking-tight">Assistance requests</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">{user.role === 'citizen' ? 'Request support and track your own requests.' : user.role === 'admin' ? 'Review the assistance queue by urgency and status.' : 'View pending assistance summaries without private citizen details.'}</p>
+          <div className="mt-5 flex flex-wrap gap-4">
+            <Link to={user.role === 'citizen' ? '/requests/mine' : '/requests'} className="border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">{user.role === 'citizen' ? 'My requests' : 'View request queue'}</Link>
+            {user.role === 'citizen' && <Link to="/requests/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Request assistance</Link>}
+          </div>
+        </section>
         {user.role === 'admin' && <DisasterList status="pending" embedded />}
-        <div className="mt-7 grid gap-5 md:grid-cols-2">
+        {dashboard.modules.length > 0 && <div className="mt-7 grid gap-5 md:grid-cols-2">
           {dashboard.modules.map(([title, description]) => (
             <section key={title} className="border border-slate-200 bg-white p-6">
               <span className="border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">Planned</span>
@@ -62,7 +70,7 @@ export default function Dashboard() {
               <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
             </section>
           ))}
-        </div>
+        </div>}
         <section className="mt-10 border-t border-slate-200 pt-7" aria-labelledby="account-heading">
           <h2 id="account-heading" className="text-lg font-semibold">Your account</h2>
           <dl className="mt-5 grid gap-x-6 gap-y-5 text-sm sm:grid-cols-2">
