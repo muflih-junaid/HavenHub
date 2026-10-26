@@ -8,6 +8,12 @@ const router = Router();
 const pageSize = 10;
 const disasterTypes = ['flood', 'landslide', 'fire', 'storm', 'other'];
 const severities = ['low', 'medium', 'high', 'critical'];
+const transitions = {
+  pending: ['verified', 'rejected'],
+  verified: ['resolved'],
+  rejected: [],
+  resolved: [],
+};
 
 function visibleReports(user) {
   if (user.role === 'citizen') return { reportedBy: user._id };
@@ -86,14 +92,21 @@ router.post('/', authorizeRoles('citizen'), async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  if (Object.keys(req.query).some((key) => key !== 'page')) throw httpError(400, 'Only the page query parameter is supported');
+  if (Object.keys(req.query).some((key) => !['page', 'status'].includes(key))) throw httpError(400, 'Only page and status query parameters are supported');
   const rawPage = req.query.page ?? '1';
-  const page = Number(rawPage);
+  const page = typeof rawPage === 'string' ? Number(rawPage) : NaN;
   if (typeof rawPage !== 'string' || !/^[1-9]\d*$/.test(rawPage) || !Number.isSafeInteger(page)
       || !Number.isSafeInteger((page - 1) * pageSize)) {
     throw httpError(400, 'Page must be a positive integer');
   }
   const filter = visibleReports(req.user);
+  if (req.query.status !== undefined) {
+    if (req.user.role !== 'admin') throw httpError(403, 'Only admins can filter reports by status');
+    if (typeof req.query.status !== 'string' || !Object.hasOwn(transitions, req.query.status)) {
+      throw httpError(400, 'Choose a valid report status');
+    }
+    filter.status = req.query.status;
+  }
   const [reports, total] = await Promise.all([
     DisasterReport.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean(),
     DisasterReport.countDocuments(filter),
@@ -102,6 +115,31 @@ router.get('/', async (req, res) => {
     reports: reports.map((report) => serializeReport(report, req.user)),
     page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)),
   });
+});
+
+router.patch('/:id/status', authorizeRoles('admin'), async (req, res) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) throw httpError(400, 'Invalid disaster report ID');
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+      || Object.keys(body).some((key) => key !== 'status')
+      || typeof body.status !== 'string' || !Object.hasOwn(transitions, body.status)) {
+    throw httpError(400, 'Provide only a valid status: pending, verified, rejected, or resolved');
+  }
+
+  const current = await DisasterReport.findOne({ _id: req.params.id }).lean();
+  if (!current) throw httpError(404, 'Disaster report not found');
+  if (!transitions[current.status]?.includes(body.status)) {
+    throw httpError(409, `Cannot change a ${current.status} report to ${body.status}`);
+  }
+
+  // Match the previous status as part of the write, so a concurrent review cannot be overwritten.
+  const report = await DisasterReport.findOneAndUpdate(
+    { _id: current._id, status: current.status },
+    { $set: { status: body.status } },
+    { returnDocument: 'after', runValidators: true },
+  ).lean();
+  if (!report) throw httpError(409, 'This report changed during review. Refresh it and try again');
+  res.status(200).json({ report: serializeReport(report, req.user) });
 });
 
 router.get('/:id', async (req, res) => {

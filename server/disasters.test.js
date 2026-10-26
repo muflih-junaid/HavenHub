@@ -24,7 +24,7 @@ let baseUrl;
 function matches(report, filter) {
   return (!filter._id || report._id.toString() === filter._id.toString())
     && (!filter.reportedBy || report.reportedBy.toString() === filter.reportedBy.toString())
-    && (!filter.status || filter.status.$in.includes(report.status));
+    && (!filter.status || (typeof filter.status === 'string' ? report.status === filter.status : filter.status.$in.includes(report.status)));
 }
 
 before(async () => {
@@ -61,6 +61,19 @@ beforeEach(() => {
   mock.method(DisasterReport, 'countDocuments', async (filter) => [...reports.values()].filter((report) => matches(report, filter)).length);
   mock.method(DisasterReport, 'findOne', (filter) => ({
     async lean() { return [...reports.values()].find((report) => matches(report, filter)) || null; },
+  }));
+  mock.method(DisasterReport, 'findOneAndUpdate', (filter, update) => ({
+    async lean() {
+      const current = [...reports.values()].find((report) => matches(report, filter));
+      if (!current) return null;
+      const updated = new DisasterReport({ ...current, ...update.$set, updatedAt: new Date() });
+      await updated.validate();
+      // Simulate a conditional atomic write, including after concurrent validation.
+      if (!matches(reports.get(current._id.toString()), filter)) return null;
+      const stored = updated.toObject();
+      reports.set(stored._id.toString(), stored);
+      return stored;
+    },
   }));
 });
 
@@ -207,16 +220,115 @@ test('lists are paginated newest first and scoped counts do not leak other citiz
 });
 
 test('rejects invalid pagination and query attempts to override visibility', async () => {
-  for (const query of ['?page=0', '?page=-1', '?page=1.5', '?page=abc', '?page=9007199254740991', '?page=1&page=2', '?page[$gt]=0', `?reportedBy=${otherCitizen._id}`, '?status=verified']) {
+  for (const query of ['?page=0', '?page=-1', '?page=1.5', '?page=abc', '?page=9007199254740991', '?page=1&page=2', '?page[$gt]=0', `?reportedBy=${otherCitizen._id}`]) {
     assert.equal((await request(query)).status, 400);
   }
 });
 
-test('no status-change or deletion endpoints are exposed', async () => {
+test('generic report updates and deletion remain unavailable', async () => {
   const report = await seed();
   for (const method of ['PATCH', 'PUT', 'DELETE']) {
     assert.equal((await request(`/${report.id}`, { method, user: admin, body: { status: 'verified' } })).status, 404);
   }
+  assert.equal(reports.get(report.id).status, 'pending');
+});
+
+test('status changes require authentication and an admin role, including for the report owner', async () => {
+  const report = await seed();
+  const path = `/${report.id}/status`;
+  assert.equal((await request(path, { user: null, method: 'PATCH', body: { status: 'verified' } })).status, 401);
+  for (const user of [citizen, otherCitizen, volunteer]) {
+    assert.equal((await request(path, { user, method: 'PATCH', body: { status: 'verified' } })).status, 403);
+  }
+  assert.equal(reports.get(report.id).status, 'pending');
+});
+
+test('admins can perform each allowed transition and citizens can read their updated statuses', async () => {
+  for (const [from, to] of [['pending', 'verified'], ['pending', 'rejected'], ['verified', 'resolved']]) {
+    const report = await seed({ status: from, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z') });
+    const result = await request(`/${report.id}/status`, { user: admin, method: 'PATCH', body: { status: to } });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.report.status, to);
+    assert.equal(result.body.report.id, report.id);
+    assert.equal(result.body.report.reportedBy, citizen.id);
+    assert.equal(result.body.report.severity, payload.severity);
+    assert.equal(result.body.report.title, payload.title);
+    assert.equal(result.body.report.createdAt, report.createdAt.toISOString());
+    assert.ok(new Date(result.body.report.updatedAt) > report.updatedAt);
+    assert.equal((await request(`/${report.id}`)).body.report.status, to);
+    const list = await request();
+    assert.equal(list.body.reports.find((item) => item.id === report.id).status, to);
+  }
+});
+
+test('rejects all unsupported transitions, including repeats and changes from terminal statuses', async () => {
+  const allowed = new Set(['pending:verified', 'pending:rejected', 'verified:resolved']);
+  for (const from of ['pending', 'verified', 'rejected', 'resolved']) {
+    for (const to of ['pending', 'verified', 'rejected', 'resolved']) {
+      if (allowed.has(`${from}:${to}`)) continue;
+      const report = await seed({ status: from });
+      const result = await request(`/${report.id}/status`, { user: admin, method: 'PATCH', body: { status: to } });
+      assert.equal(result.status, 409, `${from} -> ${to} must be rejected`);
+      assert.equal(reports.get(report.id).status, from);
+    }
+  }
+});
+
+test('rejects invalid status payloads and attempts to change other report fields', async () => {
+  const report = await seed();
+  for (const body of [
+    {}, [], { status: null }, { status: 'approved' }, { status: 'Verified' },
+    { status: ['verified'] }, { status: { $ne: 'pending' } }, { status: 'toString' },
+    { status: 'verified', reportedBy: admin.id }, { status: 'verified', severity: 'critical' },
+  ]) assert.equal((await request(`/${report.id}/status`, { user: admin, method: 'PATCH', body })).status, 400);
+  assert.equal(reports.get(report.id).status, 'pending');
+});
+
+test('status updates reject malformed IDs and return 404 for missing reports', async () => {
+  assert.equal((await request('/invalid/status', { user: admin, method: 'PATCH', body: { status: 'verified' } })).status, 400);
+  assert.equal((await request('/000000000000000000000001/status', { user: admin, method: 'PATCH', body: { status: 'verified' } })).status, 404);
+});
+
+test('competing admin reviews cannot overwrite each other', async () => {
+  const report = await seed();
+  const results = await Promise.all(['verified', 'rejected'].map((status) => request(`/${report.id}/status`, {
+    user: admin, method: 'PATCH', body: { status },
+  })));
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 409]);
+  const winner = results.find((result) => result.status === 200);
+  assert.equal(reports.get(report.id).status, winner.body.report.status);
+});
+
+test('admins can filter pending reports and the queue updates after review', async () => {
+  const pending = await seed();
+  await seed({ status: 'verified' });
+  await seed({ status: 'rejected' });
+  const queue = await request('?status=pending', { user: admin });
+  assert.equal(queue.status, 200);
+  assert.equal(queue.body.total, 1);
+  assert.deepEqual(queue.body.reports.map((report) => report.id), [pending.id]);
+  await request(`/${pending.id}/status`, { user: admin, method: 'PATCH', body: { status: 'verified' } });
+  assert.equal((await request('?status=pending', { user: admin })).body.total, 0);
+  assert.equal((await request('', { user: volunteer })).body.total, 2);
+});
+
+test('status filters do not let citizens or volunteers bypass visibility restrictions', async () => {
+  await seed({ reportedBy: otherCitizen._id });
+  for (const user of [citizen, volunteer]) {
+    assert.equal((await request('?status=pending', { user })).status, 403);
+    assert.equal((await request('?status=verified', { user })).status, 403);
+  }
+  for (const query of ['?status=unknown', '?status=pending&status=verified', '?status[$ne]=resolved']) {
+    assert.equal((await request(query, { user: admin })).status, 400);
+  }
+});
+
+test('status update database errors return 500 without changing the report', async () => {
+  const report = await seed();
+  mock.method(DisasterReport, 'findOneAndUpdate', () => { throw new Error('internal database error'); });
+  const result = await request(`/${report.id}/status`, { user: admin, method: 'PATCH', body: { status: 'verified' } });
+  assert.equal(result.status, 500);
+  assert.deepEqual(result.body, { message: 'Internal server error' });
   assert.equal(reports.get(report.id).status, 'pending');
 });
 

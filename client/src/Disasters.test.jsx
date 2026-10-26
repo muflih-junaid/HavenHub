@@ -209,3 +209,158 @@ test('report descriptions are rendered as text, without interpreting submitted H
   expect(await screen.findByText(description)).toBeTruthy();
   expect(document.querySelector('img')).toBe(null);
 });
+
+test('admins can verify and then resolve a report, with current status and actions shown immediately', async () => {
+  role = 'admin';
+  let current = { ...report };
+  handleReports = (config) => {
+    if (config.method === 'patch') current = { ...current, status: JSON.parse(config.data).status };
+    return reply(config, { report: current });
+  };
+  openPage(`/disasters/${report.id}`);
+  fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
+  expect(await screen.findByRole('button', { name: /^Resolve report:/ })).toBeTruthy();
+  expect(screen.getByText('verified')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^Verify report:/ })).toBe(null);
+  expect(screen.queryByRole('button', { name: /^Reject report:/ })).toBe(null);
+  fireEvent.click(screen.getByRole('button', { name: /^Resolve report:/ }));
+  expect(await screen.findByText('resolved')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^Resolve report:/ })).toBe(null);
+  expect(requests.filter((request) => request.method === 'patch').map((request) => [request.url, JSON.parse(request.data)])).toEqual([
+    [`/disasters/${report.id}/status`, { status: 'verified' }],
+    [`/disasters/${report.id}/status`, { status: 'resolved' }],
+  ]);
+});
+
+test('admins can reject a pending report and cannot take further status actions afterward', async () => {
+  role = 'admin';
+  handleReports = (config) => reply(config, { report: { ...report, status: config.method === 'patch' ? 'rejected' : 'pending' } });
+  openPage(`/disasters/${report.id}`);
+  fireEvent.click(await screen.findByRole('button', { name: /^Reject report:/ }));
+  expect(await screen.findByText('rejected')).toBeTruthy();
+  expect(screen.getByRole('status').textContent).toContain('updated to rejected');
+  expect(screen.queryByRole('button', { name: /^Verify report:/ })).toBe(null);
+  expect(screen.queryByRole('button', { name: /^Resolve report:/ })).toBe(null);
+});
+
+test('the admin dashboard requests pending reports and removes reviewed reports from the queue', async () => {
+  role = 'admin';
+  let reviewed = false;
+  handleReports = (config) => {
+    if (config.method === 'patch') {
+      reviewed = true;
+      return reply(config, { report: { ...report, status: 'verified' } });
+    }
+    return reply(config, listData(reviewed ? [] : [report]));
+  };
+  openPage('/dashboard/admin');
+  expect(await screen.findByRole('heading', { name: 'Pending disaster reports' })).toBeTruthy();
+  fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
+  expect(await screen.findByText('There are no pending reports on this page.')).toBeTruthy();
+  expect(screen.queryByRole('link', { name: report.title })).toBe(null);
+  expect(screen.getByRole('status').textContent).toContain('updated to verified');
+  const listRequests = requests.filter((request) => request.method === 'get' && request.url === '/disasters');
+  expect(listRequests.length).toBeGreaterThanOrEqual(2);
+  expect(listRequests.every((request) => request.params.status === 'pending')).toBe(true);
+});
+
+test('admin actions on the full report list update its badges and available actions', async () => {
+  role = 'admin';
+  handleReports = (config) => config.method === 'patch'
+    ? reply(config, { report: { ...report, status: 'verified' } })
+    : reply(config, listData());
+  openPage('/disasters');
+  fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
+  expect(await screen.findByText('verified')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Resolve report:/ })).toBeTruthy();
+  expect(screen.getByText('high severity')).toBeTruthy();
+});
+
+test.each(['pending', 'verified', 'rejected', 'resolved'])('citizens can read their own %s status without any review controls', async (status) => {
+  handleReports = (config) => reply(config, { report: { ...report, status } });
+  openPage(`/disasters/${report.id}`);
+  expect(await screen.findByText(status)).toBeTruthy();
+  expect(screen.getByText('You')).toBeTruthy();
+  for (const action of ['Verify', 'Reject', 'Resolve']) expect(screen.queryByRole('button', { name: new RegExp(`^${action} report:`) })).toBe(null);
+  expect(requests.some((request) => request.method === 'patch')).toBe(false);
+});
+
+test('volunteers do not receive review controls for a verified report', async () => {
+  role = 'volunteer';
+  handleReports = (config) => reply(config, { report: { ...report, status: 'verified', reportedBy: undefined } });
+  openPage(`/disasters/${report.id}`);
+  expect(await screen.findByText('verified')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^Resolve report:/ })).toBe(null);
+});
+
+test('a status conflict disables stale actions and lets an admin reload the current report', async () => {
+  role = 'admin';
+  let conflicted = false;
+  handleReports = (config) => {
+    if (config.method === 'patch') {
+      conflicted = true;
+      return reply(config, { message: 'This report changed during review. Refresh it and try again' }, 409);
+    }
+    return reply(config, { report: { ...report, status: conflicted ? 'rejected' : 'pending' } });
+  };
+  openPage(`/disasters/${report.id}`);
+  fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
+  expect((await screen.findByRole('alert')).textContent).toContain('changed during review');
+  expect(screen.getByRole('button', { name: /^Verify report:/ }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh report data' }));
+  expect(await screen.findByText('rejected')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^Verify report:/ })).toBe(null);
+});
+
+test('failed status updates show errors, keep the old status, and allow retry', async () => {
+  role = 'admin';
+  let failed = true;
+  handleReports = (config) => config.method === 'patch'
+    ? failed ? reply(config, {}, 503) : reply(config, { report: { ...report, status: 'verified' } })
+    : reply(config, { report });
+  openPage(`/disasters/${report.id}`);
+  fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
+  expect((await screen.findByRole('alert')).textContent).toContain('server is unavailable');
+  expect(screen.getByText('pending')).toBeTruthy();
+  failed = false;
+  fireEvent.click(screen.getByRole('button', { name: /^Verify report:/ }));
+  expect(await screen.findByText('verified')).toBeTruthy();
+});
+
+test('review buttons are disabled while an update is in flight', async () => {
+  role = 'admin';
+  let finish;
+  handleReports = (config) => config.method === 'patch'
+    ? new Promise((resolve) => { finish = () => resolve(reply(config, { report: { ...report, status: 'verified' } })); })
+    : reply(config, { report });
+  openPage(`/disasters/${report.id}`);
+  const verify = await screen.findByRole('button', { name: /^Verify report:/ });
+  fireEvent.click(verify);
+  expect(screen.getByRole('button', { name: /^Reject report:/ }).disabled).toBe(true);
+  expect(verify.disabled).toBe(true);
+  fireEvent.click(verify);
+  await waitFor(() => expect(finish).toBeTypeOf('function'));
+  expect(requests.filter((request) => request.method === 'patch')).toHaveLength(1);
+  await act(async () => finish());
+  expect(await screen.findByText('verified')).toBeTruthy();
+});
+
+test('the pending queue returns to a valid page when its last page shrinks', async () => {
+  role = 'admin';
+  let reviewed = false;
+  const remaining = { ...report, id: '000000000000000000000003', title: 'Another pending report' };
+  handleReports = (config) => {
+    if (config.method === 'patch') {
+      reviewed = true;
+      return reply(config, { report: { ...report, status: 'rejected' } });
+    }
+    const page = Number(config.params.page);
+    return reply(config, !reviewed ? listData([report], page, 11)
+      : page === 2 ? listData([], 2, 10) : listData([remaining], 1, 10));
+  };
+  openPage('/dashboard/admin?page=2');
+  fireEvent.click(await screen.findByRole('button', { name: /^Reject report:/ }));
+  expect(await screen.findByRole('link', { name: remaining.title })).toBeTruthy();
+  expect(screen.getByText('10 reports · Page 1 of 1')).toBeTruthy();
+  expect(screen.getByRole('status').textContent).toContain('updated to rejected');
+});

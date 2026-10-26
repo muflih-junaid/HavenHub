@@ -28,6 +28,7 @@ beforeEach(() => {
   requests = [];
   handleRequest = (config) => {
     if (config.url === '/health') return reply(config, { status: 'ok' });
+    if (config.url === '/disasters') return reply(config, { reports: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     return reply(config, { user: account });
   };
   // Only the transport is replaced. Components, Context, routing, and interceptors are real.
@@ -119,12 +120,13 @@ test('rejects mismatched passwords without sending a registration request', asyn
 
 test.each(['citizen', 'volunteer', 'admin'])('restores a %s session from the API and attaches its Bearer token', async (role) => {
   setToken('saved-token');
-  handleRequest = (config) => reply(config, { user: { ...account, role } });
+  handleRequest = (config) => config.url === '/disasters'
+    ? reply(config, { reports: [], page: 1, pageSize: 10, total: 0, totalPages: 1 })
+    : reply(config, { user: { ...account, role } });
   openPage(`/dashboard/${role}`);
   expect(screen.getByRole('heading', { name: /Getting your workspace ready/ })).toBeTruthy();
   expect(await screen.findByRole('heading', { name: 'Your account' })).toBeTruthy();
-  expect(requests.at(-1).url).toBe('/auth/me');
-  expect(requests.at(-1).headers.Authorization).toBe('Bearer saved-token');
+  expect(requests.find((request) => request.url === '/auth/me').headers.Authorization).toBe('Bearer saved-token');
 });
 
 test('blocks a citizen from the admin route and links to their own dashboard', async () => {

@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { dashboardPath, useAuth } from '../context/AuthContext.js';
+import DisasterList from './DisasterList.jsx';
 
 const dashboards = {
   citizen: {
@@ -52,6 +53,7 @@ export default function Dashboard() {
             {user.role === 'citizen' && <Link to="/disasters/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Report a disaster</Link>}
           </div>
         </section>
+        {user.role === 'admin' && <DisasterList status="pending" embedded />}
         <div className="mt-7 grid gap-5 md:grid-cols-2">
           {dashboard.modules.map(([title, description]) => (
             <section key={title} className="border border-slate-200 bg-white p-6">
