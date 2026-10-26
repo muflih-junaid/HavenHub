@@ -33,6 +33,7 @@ export default function App() {
           <Route element={<ProtectedRoute roles={['admin', 'volunteer']} />}>
             <Route path="/requests" element={<AssistanceList />} />
           </Route>
+          <Route element={<ProtectedRoute roles={['volunteer']} />}><Route path="/tasks" element={<AssistanceList tasks />} /></Route>
           <Route path="/requests/:id" element={<AssistanceDetail />} />
           <Route path="/disasters" element={<DisasterList />} />
           <Route element={<ProtectedRoute roles={['citizen']} />}>

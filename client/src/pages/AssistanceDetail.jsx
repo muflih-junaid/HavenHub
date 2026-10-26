@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.js';
 import RequestBadges from '../components/RequestBadges.jsx';
+import AssignmentControls from '../components/AssignmentControls.jsx';
 
 function RequestDetail({ id }) {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ function RequestDetail({ id }) {
   const item = result.item;
   return (
     <section className="mx-auto w-full max-w-4xl px-6 py-10 sm:px-10 sm:py-14">
-      <Link to={user.role === 'citizen' ? '/requests/mine' : '/requests'} className="text-sm font-semibold text-slate-600 hover:text-slate-950">← Back to requests</Link>
+      <Link to={user.role === 'citizen' ? '/requests/mine' : user.role === 'volunteer' && item?.assignedVolunteer === user.id ? '/tasks' : '/requests'} className="text-sm font-semibold text-slate-600 hover:text-slate-950">← Back to requests</Link>
       {notice && <p role="status" className="mt-7 border-l-4 border-emerald-700 bg-emerald-50 p-4 text-sm text-emerald-950">{notice}</p>}
       {location.state?.submitted && item?.status === 'pending' && <p role="status" className="mt-7 border-l-4 border-emerald-700 bg-emerald-50 p-4 text-sm text-emerald-950">Your assistance request was submitted successfully.</p>}
       {result.loading && <p role="status" className="mt-8 border border-slate-200 bg-white p-8 text-slate-600">Loading assistance request…</p>}
@@ -61,8 +62,8 @@ function RequestDetail({ id }) {
       {item && <article className="mt-8 border border-slate-200 bg-white p-6 sm:p-9">
         <p className="text-xs font-bold tracking-[0.18em] text-orange-700 uppercase">Community assistance</p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 capitalize sm:text-4xl">{item.assistanceType} assistance request</h1>
-        <div className="mt-5"><RequestBadges urgency={item.urgency} status={item.status} /></div>
-        {user.role === 'volunteer' ? <p className="mt-7 text-sm leading-7 text-slate-600">This is a pending-request summary. Descriptions, locations, and requester details are not shared in the volunteer view.</p> : <>
+        <div className="mt-5"><RequestBadges urgency={item.urgency} status={item.status} acceptedAt={item.acceptedAt} /></div>
+        {user.role === 'volunteer' && item.assignedVolunteer !== user.id ? <p className="mt-7 text-sm leading-7 text-slate-600">This is a pending-request summary. Descriptions, locations, and requester details are not shared in the volunteer view.</p> : <>
           <h2 className="mt-8 text-lg font-semibold">Assistance needed</h2>
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">{item.description}</p>
           <h2 className="mt-8 text-lg font-semibold">Location</h2>
@@ -75,6 +76,7 @@ function RequestDetail({ id }) {
           {item.requester && <div><dt className="text-xs text-slate-500">Requester</dt><dd className="mt-2 break-all">{item.requester === user.id ? 'You' : item.requester}</dd></div>}
         </dl>
         {user.role === 'citizen' && item.requester === user.id && item.status === 'pending' && <div className="mt-8 border-t border-slate-200 pt-6"><button type="button" disabled={cancelling || conflict} onClick={cancelRequest} className="cursor-pointer border border-red-300 px-5 py-3 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">{cancelling ? 'Cancelling…' : 'Cancel request'}</button><p className="mt-3 text-xs text-slate-500">Cancellation is available only while your request is pending.</p></div>}
+        {(user.role === 'admin' || (user.role === 'volunteer' && item.assignedVolunteer === user.id)) && <AssignmentControls key={item.assignmentVersion ?? 0} item={item} role={user.role} onRefresh={refresh} onUpdated={(updated, message) => { setResult({ loading: false, item: updated, error: '' }); setNotice(message); }} />}
         {cancelError && <div className="mt-5 border-l-4 border-red-600 bg-red-50 p-4"><p role="alert" className="text-sm text-red-900">{cancelError}</p><button onClick={refresh} className="mt-3 cursor-pointer text-sm font-semibold underline underline-offset-4">Refresh request</button></div>}
       </article>}
     </section>

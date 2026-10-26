@@ -11,7 +11,7 @@ const dashboards = {
   volunteer: {
     title: 'Ready to make a difference.',
     description: 'Your space to help others and support a coordinated response.',
-    modules: [['Volunteer assignments', 'Find your place in the community response.']],
+    modules: [],
   },
   admin: {
     title: 'A clearer view of the response.',
@@ -58,6 +58,7 @@ export default function Dashboard() {
           <p className="mt-3 text-sm leading-7 text-slate-600">{user.role === 'citizen' ? 'Request support and track your own requests.' : user.role === 'admin' ? 'Review the assistance queue by urgency and status.' : 'View pending assistance summaries without private citizen details.'}</p>
           <div className="mt-5 flex flex-wrap gap-4">
             <Link to={user.role === 'citizen' ? '/requests/mine' : '/requests'} className="border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">{user.role === 'citizen' ? 'My requests' : 'View request queue'}</Link>
+            {user.role === 'volunteer' && <Link to="/tasks" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">My tasks</Link>}
             {user.role === 'citizen' && <Link to="/requests/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Request assistance</Link>}
           </div>
         </section>

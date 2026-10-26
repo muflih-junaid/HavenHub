@@ -8,9 +8,17 @@ const assistanceRequestSchema = new mongoose.Schema({
   location: { type: String, required: true, trim: true, maxlength: 300 },
   urgency: { type: String, required: true, enum: ['low', 'medium', 'high', 'critical'] },
   status: { type: String, required: true, enum: ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'], default: 'pending' },
+  assignedVolunteer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  assignedAt: { type: Date, default: null },
+  acceptedAt: { type: Date, default: null },
+  startedAt: { type: Date, default: null },
+  completedAt: { type: Date, default: null },
+  assignmentCancelledAt: { type: Date, default: null },
+  assignmentVersion: { type: Number, default: 0, min: 0 },
 }, { timestamps: true });
 
 assistanceRequestSchema.index({ requester: 1, createdAt: -1, _id: -1 });
+assistanceRequestSchema.index({ assignedVolunteer: 1, createdAt: -1, _id: -1 });
 assistanceRequestSchema.index({ status: 1, urgency: 1, createdAt: -1, _id: -1 });
 assistanceRequestSchema.index({ createdAt: -1, _id: -1 });
 
