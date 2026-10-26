@@ -2,6 +2,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './app.js';
 import User from './models/User.js';
+import DisasterReport from './models/DisasterReport.js';
 import { getJwtConfig } from './utils/auth.js';
 
 mongoose.connection.on('error', () => {
@@ -24,13 +25,13 @@ async function startServer() {
 
   try {
     await mongoose.connect(uri);
-    // Wait for the unique email index before accepting requests.
-    await User.init();
+    // Wait for model indexes before accepting requests.
+    await Promise.all([User.init(), DisasterReport.init()]);
   } catch {
-    throw new Error('MongoDB initialization failed. Check MONGODB_URI, credentials, network access, and the User email index.');
+    throw new Error('MongoDB initialization failed. Check MONGODB_URI, credentials, network access, and model indexes.');
   }
 
-  console.log('MongoDB connected and User indexes ready.');
+  console.log('MongoDB connected and model indexes ready.');
 
   const server = app.listen(port, () => {
     console.log(`HavenHub API listening on http://localhost:${port}`);

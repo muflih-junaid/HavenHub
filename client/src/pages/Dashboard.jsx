@@ -1,11 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { dashboardPath, useAuth } from '../context/AuthContext.js';
 
 const dashboards = {
   citizen: {
     title: 'Your community starts here.',
     description: 'Your space to stay connected and find support when it matters.',
-    modules: [['Disaster reports', 'Share information about incidents in your community.'], ['Assistance requests', 'Connect with support for your needs.']],
+    modules: [['Assistance requests', 'Connect with support for your needs.']],
   },
   volunteer: {
     title: 'Ready to make a difference.',
@@ -42,8 +42,16 @@ export default function Dashboard() {
         <p className="mt-4 max-w-2xl leading-7 text-slate-600">Welcome, {user.name}. {dashboard.description}</p>
         <div className="mt-8 flex items-start gap-4 border border-slate-200 bg-white p-5">
           <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center bg-emerald-50 font-bold text-emerald-700">✓</span>
-          <div><h2 className="text-sm font-semibold">Your account is ready</h2><p className="mt-1 text-sm leading-6 text-slate-600">You’re signed in. This dashboard is a starting point; the response tools below are not available yet.</p></div>
+          <div><h2 className="text-sm font-semibold">Your account is ready</h2><p className="mt-1 text-sm leading-6 text-slate-600">Disaster reporting is available. Other response tools remain planned.</p></div>
         </div>
+        <section className="mt-7 border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-semibold tracking-tight">Disaster reports</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">{user.role === 'citizen' ? 'Report an incident and view your submitted reports.' : user.role === 'volunteer' ? 'View verified and resolved reports from your community.' : 'View all community disaster reports.'}</p>
+          <div className="mt-5 flex flex-wrap gap-4">
+            <Link to="/disasters" className="border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">View reports</Link>
+            {user.role === 'citizen' && <Link to="/disasters/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Report a disaster</Link>}
+          </div>
+        </section>
         <div className="mt-7 grid gap-5 md:grid-cols-2">
           {dashboard.modules.map(([title, description]) => (
             <section key={title} className="border border-slate-200 bg-white p-6">

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
+import disasterRoutes from './routes/disasters.js';
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/disasters', disasterRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
@@ -32,7 +34,7 @@ app.use((err, req, res, next) => {
   } else if (err.name === 'ValidationError') {
     status = 400;
     // Do not return Mongoose errors: they can include rejected field values.
-    message = 'Invalid user data. Check name, email, phone, role, and location';
+    message = 'Invalid data. Check the submitted fields';
   } else if (status < 500) {
     message = err.type === 'entity.parse.failed' ? 'Invalid JSON request body' : err.message;
   }
