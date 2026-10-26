@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
-    "check": "node --check app.js && node --check index.js && node --check models/User.js && node --check models/DisasterReport.js && node --check models/AssistanceRequest.js && node --check models/Resource.js && node --check models/ResourceAllocation.js && node --check routes/auth.js && node --check routes/disasters.js && node --check routes/requests.js && node --check routes/volunteers.js && node --check routes/resources.js && node --check middleware/auth.js && node --check utils/auth.js && node --check scripts/bootstrapAdmin.js && node --check auth.test.js && node --check disasters.test.js && node --check requests.test.js && node --check resources.test.js",
+    "check": "node --check app.js && node --check index.js && node --check realtime.js && node --check models/User.js && node --check models/DisasterReport.js && node --check models/AssistanceRequest.js && node --check models/Resource.js && node --check models/ResourceAllocation.js && node --check routes/auth.js && node --check routes/disasters.js && node --check routes/requests.js && node --check routes/volunteers.js && node --check routes/resources.js && node --check routes/dashboard.js && node --check middleware/auth.js && node --check utils/auth.js && node --check scripts/bootstrapAdmin.js && node --check auth.test.js && node --check disasters.test.js && node --check requests.test.js && node --check resources.test.js && node --check dashboard.test.js && node --check realtime.test.js",
     "test": "node --test",
     "bootstrap:admin": "node scripts/bootstrapAdmin.js"
   },
@@ -19,6 +19,10 @@
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.11.4"
+    "mongoose": "^9.11.4",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
   }
 }

@@ -5,6 +5,7 @@ import disasterRoutes from './routes/disasters.js';
 import requestRoutes from './routes/requests.js';
 import volunteerRoutes from './routes/volunteers.js';
 import resourceRoutes from './routes/resources.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/disasters', disasterRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/volunteers', volunteerRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

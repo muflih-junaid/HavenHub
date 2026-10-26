@@ -120,7 +120,9 @@ test('rejects mismatched passwords without sending a registration request', asyn
 
 test.each(['citizen', 'volunteer', 'admin'])('restores a %s session from the API and attaches its Bearer token', async (role) => {
   setToken('saved-token');
-  handleRequest = (config) => config.url === '/disasters'
+  handleRequest = (config) => config.url === '/dashboard/summary'
+    ? reply(config, { metrics: { disasters: { total: 0, pending: 0, verified: 0 }, requests: { pending: 0, active: 0, completed: 0 }, volunteers: { total: 0 }, resources: { totalTypes: 0, lowStock: 0 } }, recentDisasters: [], urgentPendingRequests: [], lowStockThreshold: 10, generatedAt: '2026-10-26T08:00:00Z' })
+    : config.url === '/disasters'
     ? reply(config, { reports: [], page: 1, pageSize: 10, total: 0, totalPages: 1 })
     : reply(config, { user: { ...account, role } });
   openPage(`/dashboard/${role}`);

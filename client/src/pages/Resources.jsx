@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -8,6 +9,7 @@ export default function Resources() {
   const [page, setPage] = useState(1);
   const [active, setActive] = useState('all');
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('resources:changed allocations:changed', () => setAttempt((value) => value + 1));
   const [result, setResult] = useState({ loading: true, data: null, error: '' });
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);

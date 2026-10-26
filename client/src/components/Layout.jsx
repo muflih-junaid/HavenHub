@@ -1,9 +1,11 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { dashboardPath, useAuth } from '../context/AuthContext.js';
+import { useRealtime } from '../realtime.js';
 
 export default function Layout() {
   const { user, loading, logout, storageWarning } = useAuth();
+  const { status: liveStatus } = useRealtime();
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function Layout() {
           </nav>
         </div>
       </header>
+      {user && liveStatus && <p aria-live="polite" className={`border-b px-6 py-2 text-center text-xs ${liveStatus === 'online' ? 'border-emerald-100 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>{liveStatus === 'online' ? 'Live updates connected' : liveStatus === 'connecting' ? 'Connecting live updates…' : 'Live updates disconnected. Reconnecting… You can continue using the app and refresh data manually.'}</p>}
       {storageWarning && <p role="alert" className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-center text-sm text-amber-950">{storageWarning}</p>}
       <main id="main-content" className="flex flex-1 flex-col" tabIndex={-1}><Outlet /></main>
       <footer className="border-t border-slate-200 bg-white px-6 py-6 sm:px-10">

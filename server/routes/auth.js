@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import { notifyRooms } from '../realtime.js';
 import { authenticate } from '../middleware/auth.js';
 import { authError, isValidPassword, issueToken, sanitizeUser } from '../utils/auth.js';
 
@@ -35,6 +36,7 @@ router.post('/register', async (req, res) => {
   await user.validate(['name', 'email', 'role', 'phone', 'location']);
   user.passwordHash = await bcrypt.hash(password, 12);
   await user.save();
+  if (user.role === 'volunteer') await notifyRooms(req, ['role:admin'], 'volunteers:changed');
 
   res.status(201).json({ token: issueToken(user), user: sanitizeUser(user) });
 });

@@ -243,7 +243,7 @@ test('admins can reject a pending report and cannot take further status actions 
   expect(screen.queryByRole('button', { name: /^Resolve report:/ })).toBe(null);
 });
 
-test('the admin dashboard requests pending reports and removes reviewed reports from the queue', async () => {
+test('the pending report queue requests pending reports and removes reviewed reports', async () => {
   role = 'admin';
   let reviewed = false;
   handleReports = (config) => {
@@ -253,7 +253,7 @@ test('the admin dashboard requests pending reports and removes reviewed reports 
     }
     return reply(config, listData(reviewed ? [] : [report]));
   };
-  openPage('/dashboard/admin');
+  openPage('/disasters?status=pending');
   expect(await screen.findByRole('heading', { name: 'Pending disaster reports' })).toBeTruthy();
   fireEvent.click(await screen.findByRole('button', { name: /^Verify report:/ }));
   expect(await screen.findByText('There are no pending reports on this page.')).toBeTruthy();
@@ -358,7 +358,7 @@ test('the pending queue returns to a valid page when its last page shrinks', asy
     return reply(config, !reviewed ? listData([report], page, 11)
       : page === 2 ? listData([], 2, 10) : listData([remaining], 1, 10));
   };
-  openPage('/dashboard/admin?page=2');
+  openPage('/disasters?status=pending&page=2');
   fireEvent.click(await screen.findByRole('button', { name: /^Reject report:/ }));
   expect(await screen.findByRole('link', { name: remaining.title })).toBeTruthy();
   expect(screen.getByText('10 reports · Page 1 of 1')).toBeTruthy();

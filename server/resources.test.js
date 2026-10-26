@@ -122,7 +122,7 @@ beforeEach(() => {
     return run;
   });
 });
-afterEach(() => mock.restoreAll());
+afterEach(() => { app.set('io', undefined); mock.restoreAll(); });
 after(async () => {
   if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   if (originalSecret === undefined) delete process.env.JWT_SECRET;
@@ -297,4 +297,26 @@ test('malformed filters, IDs, edit quantities, and versions are rejected', async
   for (const body of [{ quantityAvailable: 0.2, expectedVersion: 0 }, { quantityAvailable: -1, expectedVersion: 0 }, { active: false, expectedVersion: 0 }, { name: 'New', expectedVersion: '0' }, { name: 'New', expectedVersion: -1 }]) assert.equal((await http(`/${resource.id}`, { method: 'PATCH', body })).status, 400);
   assert.equal((await http('/bad', { method: 'PATCH', body: { name: 'New', expectedVersion: 0 } })).status, 400);
   assert.equal((await http('/000000000000000000000001', { method: 'PATCH', body: { name: 'New', expectedVersion: 0 } })).status, 404);
+});
+
+
+test('allocation notifications are admin-only and emitted only after a successful commit', async () => {
+  const resource = await seedResource(); const request = seedRequest();
+  const emitted = [];
+  const socket = {
+    connected: true, data: { userId: admin.id, role: 'admin' }, handshake: { auth: { token: issueToken(admin) } },
+    emit(event, payload) {
+      assert.equal(resources.get(resource.id).quantityAvailable, 6);
+      assert.equal(allocations.size, 1, 'the allocation must already be committed before notifying');
+      emitted.push({ event, payload });
+    },
+    disconnect() { assert.fail('valid admin should remain connected'); },
+  };
+  app.set('io', { in(rooms) { assert.deepEqual(rooms, ['role:admin']); return { async fetchSockets() { return [socket]; } }; } });
+  recordFailure = true;
+  assert.equal((await allocate(resource, request, 4)).status, 500);
+  assert.deepEqual(emitted, []);
+  recordFailure = false;
+  assert.equal((await allocate(resource, request, 4)).status, 201);
+  assert.deepEqual(emitted, [{ event: 'allocations:changed', payload: { resourceId: resource.id, requestId: request.id } }]);
 });

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import AssistanceRequest from '../models/AssistanceRequest.js';
 import DisasterReport from '../models/DisasterReport.js';
 import User from '../models/User.js';
+import { notifyRequest } from '../realtime.js';
 import { authenticate, authorizeRoles } from '../middleware/auth.js';
 import { authError as httpError } from '../utils/auth.js';
 
@@ -103,6 +104,7 @@ router.post('/', authorizeRoles('citizen'), async (req, res) => {
     assistanceType: body.assistanceType, description: body.description, location: body.location, urgency: body.urgency,
   });
   await item.save();
+  await notifyRequest(req, item);
   res.status(201).json({ request: serializeRequest(item, req.user) });
 });
 
@@ -124,6 +126,7 @@ router.patch('/:id/cancel', authorizeRoles('citizen'), async (req, res) => {
     { returnDocument: 'after', runValidators: true },
   ).lean();
   if (!item) throw httpError(409, 'This request changed. Refresh it before trying again');
+  await notifyRequest(req, item, current);
   res.status(200).json({ request: serializeRequest(item, req.user) });
 });
 
@@ -156,6 +159,7 @@ async function updateAssignment(req, res, current, changes) {
     { returnDocument: 'after', runValidators: true },
   ).lean();
   if (!item) throw httpError(409, 'This request changed. Refresh it before trying again');
+  await notifyRequest(req, item, current, true);
   res.status(200).json({ request: serializeRequest(item, req.user) });
 }
 

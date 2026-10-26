@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createServer } from 'node:http';
 import mongoose from 'mongoose';
 import app from './app.js';
 import User from './models/User.js';
@@ -7,6 +8,7 @@ import AssistanceRequest from './models/AssistanceRequest.js';
 import Resource from './models/Resource.js';
 import ResourceAllocation from './models/ResourceAllocation.js';
 import { getJwtConfig } from './utils/auth.js';
+import { attachRealtime } from './realtime.js';
 
 mongoose.connection.on('error', () => {
   // Driver errors can include connection details, so do not log the raw error.
@@ -36,7 +38,9 @@ async function startServer() {
 
   console.log('MongoDB connected and model indexes ready.');
 
-  const server = app.listen(port, () => {
+  const server = createServer(app);
+  attachRealtime(server, app);
+  server.listen(port, () => {
     console.log(`HavenHub API listening on http://localhost:${port}`);
   });
 

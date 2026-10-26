@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import Resource from '../models/Resource.js';
+import { notifyRooms } from '../realtime.js';
 import ResourceAllocation from '../models/ResourceAllocation.js';
 import AssistanceRequest from '../models/AssistanceRequest.js';
 import { authenticate, authorizeRoles } from '../middleware/auth.js';
@@ -73,6 +74,7 @@ router.post('/', async (req, res) => {
   validateResource(req.body);
   const resource = new Resource(Object.fromEntries(resourceFields.map((field) => [field, req.body[field]])));
   await resource.save();
+  await notifyRooms(req, ['role:admin'], 'resources:changed', { id: resource.id });
   res.status(201).json({ resource: serializeResource(resource) });
 });
 
@@ -115,6 +117,7 @@ router.patch('/:id', async (req, res) => {
     if (!await Resource.exists({ _id: req.params.id })) throw httpError(404, 'Resource not found');
     throw httpError(409, 'Resource unavailable or changed. Refresh inventory before editing');
   }
+  await notifyRooms(req, ['role:admin'], 'resources:changed', { id: resource._id.toString() });
   res.json({ resource: serializeResource(resource) });
 });
 
@@ -130,6 +133,7 @@ router.patch('/:id/deactivate', async (req, res) => {
     if (!await Resource.exists({ _id: req.params.id })) throw httpError(404, 'Resource not found');
     throw httpError(409, 'Resource unavailable or changed. Refresh inventory before deactivating');
   }
+  await notifyRooms(req, ['role:admin'], 'resources:changed', { id: resource._id.toString() });
   res.json({ resource: serializeResource(resource) });
 });
 
@@ -176,6 +180,8 @@ router.post('/:id/allocations', async (req, res) => {
     // Let the transaction abort; never issue a separate refund that could double-credit stock.
     throw error;
   }
+  // Emit only after the stock deduction and allocation record have committed.
+  await notifyRooms(req, ['role:admin'], 'allocations:changed', { resourceId: result.resource.id, requestId: result.allocation.assistanceRequest });
   res.status(201).json(result);
 });
 

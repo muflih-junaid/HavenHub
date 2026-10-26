@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -12,6 +13,7 @@ export default function ResourceAllocations({ request, onRefresh }) {
   const [quantity, setQuantity] = useState('1');
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('resources:changed allocations:changed requests:changed assignments:changed', () => setAttempt((value) => value + 1));
   const [history, setHistory] = useState({ loading: true, data: null, error: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,10 +25,13 @@ export default function ResourceAllocations({ request, onRefresh }) {
     const controller = new AbortController();
     async function loadStock() {
       try {
-        const { data } = await api.get('/resources', { params: { active: 'true', page: stockPage }, signal: controller.signal });
+        const pages = await Promise.all(Array.from({ length: stockPage }, (_, index) => api.get('/resources', {
+          params: { active: 'true', page: index + 1 }, signal: controller.signal,
+        })));
         if (controller.signal.aborted) return;
-        setResources((previous) => stockPage === 1 ? data.resources : [...previous, ...data.resources.filter((item) => !previous.some((old) => old.id === item.id))]);
-        setStock({ loading: false, error: '', more: data.page < data.totalPages });
+        setResources(pages.flatMap(({ data }) => data.resources));
+        const last = pages.at(-1).data;
+        setStock({ loading: false, error: '', more: last.page < last.totalPages });
       } catch (failure) {
         if (!controller.signal.aborted) setStock({ loading: false, error: apiErrorMessage(failure), more: false });
       }

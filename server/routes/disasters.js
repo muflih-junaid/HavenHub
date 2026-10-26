@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import DisasterReport from '../models/DisasterReport.js';
+import { notifyDisaster } from '../realtime.js';
 import { authenticate, authorizeRoles } from '../middleware/auth.js';
 import { authError as httpError } from '../utils/auth.js';
 
@@ -88,6 +89,7 @@ router.post('/', authorizeRoles('citizen'), async (req, res) => {
     status: 'pending', reportedBy: req.user._id,
   });
   await report.save();
+  await notifyDisaster(req, report);
   res.status(201).json({ report: serializeReport(report, req.user) });
 });
 
@@ -139,6 +141,7 @@ router.patch('/:id/status', authorizeRoles('admin'), async (req, res) => {
     { returnDocument: 'after', runValidators: true },
   ).lean();
   if (!report) throw httpError(409, 'This report changed during review. Refresh it and try again');
+  await notifyDisaster(req, report);
   res.status(200).json({ report: serializeReport(report, req.user) });
 });
 

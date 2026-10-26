@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -9,6 +10,7 @@ function RequestListPage({ mine, tasks, page, urgency, status }) {
   const [, setSearchParams] = useSearchParams();
   const [result, setResult] = useState({ loading: true, data: null, error: '' });
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('requests:changed assignments:changed requests:queue-changed', () => setAttempt((value) => value + 1));
 
   useEffect(() => {
     const controller = new AbortController();

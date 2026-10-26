@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -11,6 +12,7 @@ function RequestDetail({ id }) {
   const location = useLocation();
   const [result, setResult] = useState({ loading: true, item: null, error: '' });
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('requests:changed assignments:changed requests:queue-changed', () => setAttempt((value) => value + 1), id);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [conflict, setConflict] = useState(false);

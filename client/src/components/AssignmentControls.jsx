@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import api, { apiErrorMessage } from '../api/client.js';
 
@@ -5,16 +6,20 @@ function VolunteerPicker({ selected, onSelect, disabled, assignedVolunteer }) {
   const [people, setPeople] = useState([]);
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('volunteers:changed', () => setAttempt((value) => value + 1));
   const [result, setResult] = useState({ loading: true, error: '', more: false });
 
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
       try {
-        const { data } = await api.get('/volunteers', { params: { page }, signal: controller.signal });
+        const pages = await Promise.all(Array.from({ length: page }, (_, index) => api.get('/volunteers', {
+          params: { page: index + 1 }, signal: controller.signal,
+        })));
         if (controller.signal.aborted) return;
-        setPeople((previous) => page === 1 ? data.volunteers : [...previous, ...data.volunteers.filter((person) => !previous.some((old) => old.id === person.id))]);
-        setResult({ loading: false, error: '', more: data.page < data.totalPages });
+        setPeople(pages.flatMap(({ data }) => data.volunteers));
+        const last = pages.at(-1).data;
+        setResult({ loading: false, error: '', more: last.page < last.totalPages });
       } catch (failure) {
         if (!controller.signal.aborted) setResult({ loading: false, error: apiErrorMessage(failure), more: false });
       }

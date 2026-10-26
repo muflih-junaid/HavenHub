@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -10,6 +11,7 @@ function ReportDetail({ id }) {
   const location = useLocation();
   const [result, setResult] = useState({ status: 'loading', report: null, error: '' });
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('disasters:changed', () => setAttempt((value) => value + 1), id);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {

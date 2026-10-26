@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../realtime.js';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { apiErrorMessage } from '../api/client.js';
@@ -10,6 +11,7 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
   const [, setSearchParams] = useSearchParams();
   const [result, setResult] = useState({ status: 'loading', data: null, error: '' });
   const [attempt, setAttempt] = useState(0);
+  useLiveRefresh('disasters:changed', () => setAttempt((value) => value + 1));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -18,7 +20,7 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
         const { data } = await api.get('/disasters', { params: { page, ...(status ? { status } : {}) }, signal: controller.signal });
         if (!controller.signal.aborted && status && data.page > data.totalPages) {
           // Reviewing the last report on a page can shrink the pending queue.
-          setSearchParams({ page: String(data.totalPages) }, { replace: true });
+          setSearchParams({ page: String(data.totalPages), status }, { replace: true });
           return;
         }
         if (!controller.signal.aborted) setResult({ status: 'ready', data, error: '' });
@@ -29,6 +31,12 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
     loadReports();
     return () => controller.abort();
   }, [page, status, attempt, setSearchParams]);
+
+  function pageLink(nextPage) {
+    const params = new URLSearchParams({ page: String(nextPage) });
+    if (status) params.set('status', status);
+    return `?${params}`;
+  }
 
   function retry() {
     setResult({ status: 'loading', data: null, error: '' });
@@ -62,7 +70,7 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
       <p className="text-xs font-bold tracking-[0.18em] text-orange-700 uppercase">Community response</p>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-5">
         <div>
-          {embedded ? <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Pending disaster reports</h2> : <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Disaster reports</h1>}
+          {embedded ? <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Pending disaster reports</h2> : <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{status ? `${status[0].toUpperCase() + status.slice(1)} disaster reports` : 'Disaster reports'}</h1>}
           <p className="mt-4 max-w-2xl leading-7 text-slate-600">{status === 'pending' ? 'Review new submissions. Open a report for its full description and location before making a decision.' : descriptions[user.role]}</p>
         </div>
         {user.role === 'citizen' && <Link to="/disasters/new" className="bg-orange-700 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-800">Report a disaster <span aria-hidden="true">↗</span></Link>}
@@ -95,8 +103,8 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
             <nav aria-label="Report pages" className="mt-7 flex flex-wrap items-center justify-between gap-4 text-sm">
               <p className="text-slate-600">{data.total} {data.total === 1 ? 'report' : 'reports'} · Page {data.page} of {data.totalPages}</p>
               <div className="flex gap-3">
-                {data.page > 1 ? <Link to={`?page=${data.page - 1}`} className="border border-slate-300 bg-white px-4 py-2 font-semibold hover:bg-slate-100">Previous</Link> : <button disabled className="border border-slate-200 px-4 py-2 text-slate-400">Previous</button>}
-                {data.page < data.totalPages ? <Link to={`?page=${data.page + 1}`} className="border border-slate-300 bg-white px-4 py-2 font-semibold hover:bg-slate-100">Next</Link> : <button disabled className="border border-slate-200 px-4 py-2 text-slate-400">Next</button>}
+                {data.page > 1 ? <Link to={pageLink(data.page - 1)} className="border border-slate-300 bg-white px-4 py-2 font-semibold hover:bg-slate-100">Previous</Link> : <button disabled className="border border-slate-200 px-4 py-2 text-slate-400">Previous</button>}
+                {data.page < data.totalPages ? <Link to={pageLink(data.page + 1)} className="border border-slate-300 bg-white px-4 py-2 font-semibold hover:bg-slate-100">Next</Link> : <button disabled className="border border-slate-200 px-4 py-2 text-slate-400">Next</button>}
               </div>
             </nav>
           </>
@@ -106,8 +114,10 @@ function ReportListPage({ page, status, embedded, notice, onNotice }) {
   );
 }
 
-export default function DisasterList({ status, embedded = false }) {
+export default function DisasterList({ status: suppliedStatus, embedded = false }) {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const status = suppliedStatus ?? (user.role === 'admin' ? searchParams.get('status') || undefined : undefined);
   const [notice, setNotice] = useState('');
   const page = searchParams.get('page') ?? '1';
   return <ReportListPage key={`${page}-${status || 'all'}`} page={page} status={status} embedded={embedded} notice={notice} onNotice={setNotice} />;
