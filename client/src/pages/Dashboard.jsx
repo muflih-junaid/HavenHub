@@ -16,7 +16,7 @@ const dashboards = {
   admin: {
     title: 'A clearer view of the response.',
     description: 'Your space to bring people, resources, and response efforts together.',
-    modules: [['Response overview', 'Coordinate reports and assistance across your community.'], ['Resource coordination', 'Manage inventory and the allocation of essential resources.']],
+    modules: [['Response overview', 'Coordinate reports and assistance across your community.']],
   },
 };
 
@@ -62,6 +62,7 @@ export default function Dashboard() {
             {user.role === 'citizen' && <Link to="/requests/new" className="bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800">Request assistance</Link>}
           </div>
         </section>
+        {user.role === 'admin' && <section className="mt-7 border border-slate-200 bg-white p-6"><h2 className="text-xl font-semibold">Resource inventory</h2><p className="mt-3 text-sm leading-7 text-slate-600">Manage stock and view allocations across assistance requests.</p><Link to="/resources" className="mt-5 inline-block border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Manage resources</Link></section>}
         {user.role === 'admin' && <DisasterList status="pending" embedded />}
         {dashboard.modules.length > 0 && <div className="mt-7 grid gap-5 md:grid-cols-2">
           {dashboard.modules.map(([title, description]) => (

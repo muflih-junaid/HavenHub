@@ -46,6 +46,8 @@ beforeEach(() => {
   api.defaults.adapter = async (config) => {
     if (config.url === '/auth/me') return reply(config, { user: { ...user, role } });
     requests.push(config);
+    if (config.url === '/resources') return reply(config, { resources: [], page: 1, total: 0, totalPages: 1 });
+    if (config.url === '/resources/allocations') return reply(config, { allocations: [], page: 1, total: 0, totalPages: 1 });
     if (config.url === '/volunteers') return handleVolunteers(config);
     return config.url === '/disasters' ? handleReports(config) : handleRequests(config);
   };

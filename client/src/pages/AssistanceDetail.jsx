@@ -4,6 +4,7 @@ import api, { apiErrorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.js';
 import RequestBadges from '../components/RequestBadges.jsx';
 import AssignmentControls from '../components/AssignmentControls.jsx';
+import ResourceAllocations from '../components/ResourceAllocations.jsx';
 
 function RequestDetail({ id }) {
   const { user } = useAuth();
@@ -78,6 +79,7 @@ function RequestDetail({ id }) {
         {user.role === 'citizen' && item.requester === user.id && item.status === 'pending' && <div className="mt-8 border-t border-slate-200 pt-6"><button type="button" disabled={cancelling || conflict} onClick={cancelRequest} className="cursor-pointer border border-red-300 px-5 py-3 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">{cancelling ? 'Cancelling…' : 'Cancel request'}</button><p className="mt-3 text-xs text-slate-500">Cancellation is available only while your request is pending.</p></div>}
         {(user.role === 'admin' || (user.role === 'volunteer' && item.assignedVolunteer === user.id)) && <AssignmentControls key={item.assignmentVersion ?? 0} item={item} role={user.role} onRefresh={refresh} onUpdated={(updated, message) => { setResult({ loading: false, item: updated, error: '' }); setNotice(message); }} />}
         {cancelError && <div className="mt-5 border-l-4 border-red-600 bg-red-50 p-4"><p role="alert" className="text-sm text-red-900">{cancelError}</p><button onClick={refresh} className="mt-3 cursor-pointer text-sm font-semibold underline underline-offset-4">Refresh request</button></div>}
+        {user.role === 'admin' && <ResourceAllocations request={item} onRefresh={refresh} />}
       </article>}
     </section>
   );
