@@ -40,6 +40,9 @@ export default function App() {
           <Route path="/disasters" element={<DisasterList />} />
           <Route element={<ProtectedRoute roles={['citizen']} />}>
             <Route path="/disasters/new" element={<DisasterForm />} />
+            <Route element={<ProtectedRoute roles={['citizen', 'admin']} />}>
+          <Route path="/disasters/:id/edit" element={<DisasterForm />} />
+</Route>
           </Route>
           <Route path="/disasters/:id" element={<DisasterDetail />} />
           <Route path="/dashboard" element={<DashboardRedirect />} />

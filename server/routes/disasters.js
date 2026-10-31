@@ -4,6 +4,7 @@ import DisasterReport from '../models/DisasterReport.js';
 import { notifyDisaster } from '../realtime.js';
 import { authenticate, authorizeRoles } from '../middleware/auth.js';
 import { authError as httpError } from '../utils/auth.js';
+import AssistanceRequest from '../models/AssistanceRequest.js';
 
 const router = Router();
 const pageSize = 10;
@@ -151,6 +152,37 @@ router.get('/:id', async (req, res) => {
   // Treat private and nonexistent reports identically, without revealing their existence.
   if (!report) throw httpError(404, 'Disaster report not found');
   res.status(200).json({ report: serializeReport(report, req.user) });
+});
+
+router.put('/:id', authorizeRoles('citizen', 'admin'), async (req, res) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) throw httpError(400, 'Invalid disaster report ID');
+  validateReport(req.body);
+  const { title, description, disasterType, severity, location } = req.body;
+
+  const filter = { _id: req.params.id };
+  if (req.user.role === 'citizen') { filter.reportedBy = req.user._id; filter.status = 'pending'; }
+
+  const report = await DisasterReport.findOneAndUpdate(
+    filter,
+    { $set: { title, description, disasterType, severity,
+              location: { address: location.address, latitude: location.latitude, longitude: location.longitude } } },
+    { returnDocument: 'after', runValidators: true },
+  ).lean();
+  if (!report) throw httpError(404, 'Report not found, or it can no longer be edited');
+  await notifyDisaster(req, report);
+  res.status(200).json({ report: serializeReport(report, req.user) });
+});
+
+router.delete('/:id', authorizeRoles('citizen', 'admin'), async (req, res) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) throw httpError(400, 'Invalid disaster report ID');
+  const filter = { _id: req.params.id };
+  if (req.user.role === 'citizen') { filter.reportedBy = req.user._id; filter.status = 'pending'; }
+
+  const report = await DisasterReport.findOneAndDelete(filter).lean();
+  if (!report) throw httpError(404, 'Report not found, or it can no longer be deleted');
+  await AssistanceRequest.updateMany({ disaster: report._id }, { $unset: { disaster: '' } });
+  await notifyDisaster(req, report);
+  res.status(200).json({ id: report._id.toString() });
 });
 
 export default router;

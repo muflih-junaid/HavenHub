@@ -5,6 +5,7 @@ import api, { apiErrorMessage } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.js';
 import ReportBadges from '../components/ReportBadges.jsx';
 import ReportStatusControls from '../components/ReportStatusControls.jsx';
+import ReportActions from '../components/ReportActions.jsx';
 
 function ReportDetail({ id }) {
   const { user } = useAuth();
@@ -52,6 +53,8 @@ function ReportDetail({ id }) {
           <h1 className="mt-4 break-words text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{report.title}</h1>
           <div className="mt-5"><ReportBadges severity={report.severity} status={report.status} /></div>
           <ReportStatusControls report={report} onUpdated={handleStatusUpdated} onRefresh={retry} />
+          <ReportStatusControls report={report} onUpdated={handleStatusUpdated} onRefresh={retry} />
+          <ReportActions report={report} />
           <h2 className="mt-8 text-lg font-semibold">What happened</h2>
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">{report.description}</p>
           <section className="mt-8 border-t border-slate-200 pt-6" aria-labelledby="location-heading">
