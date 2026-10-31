@@ -1,48 +1,157 @@
-# HavenHub
+# HavenHub – Disaster Response and Resource Coordination Platform
+
+HavenHub is a web-based disaster response and resource coordination platform
+The project aims to provide a centralized platform for reporting disaster incidents, managing assistance requests, and coordinating response activities.
+
+## Technology Stack
+
+- **Frontend:** React, Vite
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB
+- **Authentication:** JSON Web Tokens (JWT)
+
+## Prerequisites
+
+Make sure the following software is installed on your machine:
+
+- [Node.js](https://nodejs.org/) version **22 or later**
+- npm (included with Node.js)
+- MongoDB instance (local installation or MongoDB Atlas)
+- Git
+
+## Project Setup
+
+Follow these steps to run the project locally.
+
+### Step 1: Install Node.js
+
+Install Node.js version **22 or later**, as required by the project.
+
+Verify your installation:
 
 ```bash
-# Install (Node.js 24.15+ LTS or 26+)
-npm --prefix client install
-npm --prefix server install
+node --version
+npm --version
+```
 
-# Configure local environment files (run once from the project root)
-printf 'VITE_API_URL=http://localhost:5000/api\n' > client/.env
-# Copy only if server/.env does not already exist
-cp -n server/.env.example server/.env
-# Edit server/.env and set MONGODB_URI and JWT_SECRET before starting the API
-# Generate JWT_SECRET (paste its output into server/.env)
+### Step 2: Install Dependencies
+
+Open two separate terminals:
+
+- **Terminal 1:** Backend (Server)
+- **Terminal 2:** Frontend (Client)
+
+In Terminal 1, navigate to the server directory and install the dependencies:
+
+```bash
+cd server
+npm install
+```
+
+In Terminal 2, navigate to the client directory and install the dependencies:
+
+```bash
+cd client
+npm install
+```
+
+### Step 3: Configure Environment Variables
+
+The project requires environment variables for the frontend and backend.
+
+**Frontend Configuration**
+
+Create a `.env` file inside the `client` directory:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+**Backend Configuration**
+
+Inside the `server` directory, copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Open the newly created `server/.env` file and configure the following variables:
+
+```env
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_generated_jwt_secret
+```
+
+Replace the MongoDB URI with your actual MongoDB connection string.
+
+Generate a secure JWT secret using:
+
+```bash
 openssl rand -hex 32
 ```
 
+Copy the generated value into the `JWT_SECRET` variable.
+
+**Important:** Do not commit your `.env` files or expose your database credentials and JWT secret in the GitHub repository.
+
+### Step 4: Start the Backend Server
+
+In Terminal 1, from the `server` directory, execute:
+
 ```bash
-# Terminal 1 — API at http://localhost:5000
-cd server
 npm run dev
 ```
 
+The backend server should be available at:
+
+```text
+http://localhost:5000
+```
+
+### Step 5: Start the Frontend Application
+
+In Terminal 2, from the `client` directory, execute:
+
 ```bash
-# Terminal 2 — client at http://localhost:5173
-cd client
 npm run dev
 ```
 
-```bash
-# Checks (from the project root)
-npm --prefix client run lint
-npm --prefix client test
-npm --prefix client run build
-npm --prefix server run check
-npm --prefix server test
-curl http://localhost:5000/api/health
+Vite will display the local development URL in the terminal. Open that URL in your browser to access HavenHub.
 
-# Start the API without file watching
-npm --prefix server start
+The default Vite development URL is:
+
+```text
+http://localhost:5173
 ```
 
-For a local admin, set `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_PHONE` in `server/.env`, then run:
+## Running the Application
 
-```bash
-npm --prefix server run bootstrap:admin
-```
+Make sure all the required services are running:
 
-The command leaves an existing admin unchanged and refuses to promote a citizen or volunteer with the same email. Remove the `ADMIN_*` credentials afterward. Passwords need at least 8 characters and at most 72 UTF-8 bytes. `JWT_EXPIRES_IN_SECONDS` defaults to `3600`.
+| Component    | Address                                             |
+| ------------ | --------------------------------------------------- |
+| Frontend     | http://localhost:5173                               |
+| Backend      | http://localhost:5000                               |
+| API Base URL | http://localhost:5000/api                           |
+| Database     | MongoDB connection configured through `MONGODB_URI` |
+
+## Troubleshooting
+
+- **Backend connection error:** Ensure the backend server is running and the `VITE_API_URL` is configured correctly.
+- **Database connection error:** Verify the `MONGODB_URI` in the server environment file.
+- **Authentication issues:** Ensure that a valid `JWT_SECRET` is configured.
+- **Dependency errors:** Try removing `node_modules` and reinstalling dependencies using `npm install`.
+
+## Project Information
+
+**Project Name:** HavenHub – Disaster Response and Resource Coordination Platform
+
+**Module:** EC4307 – Web Application Development
+
+**Academic Year:** 2026
+
+**Registration Number:** EG/2023/5672
+
+---
+
+_Developed as an academic project for the EC4307 Web Application Development module._
