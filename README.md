@@ -21,104 +21,60 @@ Make sure the following software is installed on your machine:
 
 ## Project Setup
 
-Follow these steps to run the project locally.
+7. Setup Steps
 
-### Step 1: Install Node.js
+Follow these steps to run the project locally:
 
-Install Node.js version **22 or later**, as required by the project.
+### Step 1 : Install Node.js
 
-Verify your installation:
+Use Node.js version 22 or later as required by the project.
 
-```bash
-node --version
-npm --version
-```
+### Step 2: Install dependencies
 
-### Step 2: Install Dependencies
-
-Open two separate terminals:
-
-- **Terminal 1:** Backend (Server)
-- **Terminal 2:** Frontend (Client)
-
-In Terminal 1, navigate to the server directory and install the dependencies:
+Open two terminals (Terminal 1 for server, Terminal 2 for client):
 
 ```bash
-cd server
-npm install
+cd client && npm install
+cd server && npm install
 ```
 
-In Terminal 2, navigate to the client directory and install the dependencies:
+### Step 3: Set up environment files
 
-```bash
-cd client
-npm install
-```
-
-### Step 3: Configure Environment Variables
-
-The project requires environment variables for the frontend and backend.
-
-**Frontend Configuration**
-
-Create a `.env` file inside the `client` directory:
+Create a Client Environment file `.env`:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-**Backend Configuration**
+For the server, copy `.env.example` to `.env` and set `MONGODB_URI` and `JWT_SECRET`.
 
-Inside the `server` directory, copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Open the newly created `server/.env` file and configure the following variables:
-
-```env
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_generated_jwt_secret
-```
-
-Replace the MongoDB URI with your actual MongoDB connection string.
-
-Generate a secure JWT secret using:
+Generate a JWT secret using:
 
 ```bash
 openssl rand -hex 32
 ```
 
-Copy the generated value into the `JWT_SECRET` variable.
+### Step 4 & 5: Start Backend and Frontend
 
-**Important:** Do not commit your `.env` files or expose your database credentials and JWT secret in the GitHub repository.
-
-### Step 4: Start the Backend Server
-
-In Terminal 1, from the `server` directory, execute:
+In the server terminal, run:
 
 ```bash
 npm run dev
 ```
 
-The backend server should be available at:
+The backend server will run at:
 
 ```text
 http://localhost:5000
 ```
 
-### Step 5: Start the Frontend Application
-
-In Terminal 2, from the `client` directory, execute:
+In the client terminal, run:
 
 ```bash
 npm run dev
 ```
 
-Vite will display the local development URL in the terminal. Open that URL in your browser to access HavenHub.
-
-The default Vite development URL is:
+The frontend app will run at:
 
 ```text
 http://localhost:5173
